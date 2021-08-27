@@ -163,7 +163,7 @@ def to_viterbi_cents(salience):
     global graph
     with graph.as_default():
         set_session(sess)
-        path = model.predict(observations.reshape(-1, 1), [len(observations)]
+        path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -229,9 +229,7 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
         set_session(sess)
         return model.predict(frames, verbose=verbose)
 
-    return model.predict(frames, verbose=verbose)
-
-
+    
 def predict(audio, sr, model_capacity='full',
             viterbi=False, center=True, step_size=10, verbose=1):
     """
