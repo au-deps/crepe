@@ -9,6 +9,17 @@ from scipy.io import wavfile
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
+from tensorflow.python.keras.backend import set_session
+from tensorflow.python.keras.models import load_model
+import tensorflow.compat.v1 as tf
+
+sess = tf.Session()
+graph = tf.get_default_graph()
+
+# IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
+# Otherwise, their weights will be unavailable in the threads after the session there has been set
+set_session(sess)
+
 # store as a global variable, since we only support a few models for now
 models = {
     'tiny': None,
@@ -147,7 +158,12 @@ def to_viterbi_cents(salience):
 
     # find the Viterbi path
     observations = np.argmax(salience, axis=1)
-    path = model.predict(observations.reshape(-1, 1), [len(observations)])
+    
+    global sess
+    global graph
+    with graph.as_default():
+        set_session(sess)
+        path = model.predict(observations.reshape(-1, 1), [len(observations)]
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -209,6 +225,10 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     frames /= np.std(frames, axis=1)[:, np.newaxis]
 
     # run prediction and convert the frequency bin weights to Hz
+    with graph.as_default():
+        set_session(sess)
+        return model.predict(frames, verbose=verbose)
+
     return model.predict(frames, verbose=verbose)
 
 
