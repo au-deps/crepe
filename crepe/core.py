@@ -234,9 +234,9 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     frames /= np.std(frames, axis=1)[:, np.newaxis]
     
     # run prediction and convert the frequency bin weights to Hz
-    with graph.as_default():
-        set_session(sess)
-        return model.predict(frames, verbose=verbose)
+#     with graph.as_default():
+#         set_session(sess)
+    return model.predict(frames, verbose=verbose)
 
     
 def predict(audio, sr, model_capacity='full',
