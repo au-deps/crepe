@@ -216,14 +216,13 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
 #     # Otherwise, their weights will be unavailable in the threads after the session there has been set
 #     with graph.as_default():
 #         set_session(sess)
-model = build_and_load_model(model_capacity)
-
+    model = build_and_load_model(model_capacity)
     if len(audio.shape) == 2:
         audio = audio.mean(1)  # make mono
     audio = audio.astype(np.float32)
     if sr != model_srate:
         # resample audio if necessary
-        from resampy import resample
+    from resampy import resample
         audio = resample(audio, sr, model_srate)
 
     # pad so that frames are centered around their timestamps (i.e. first frame
@@ -245,7 +244,7 @@ model = build_and_load_model(model_capacity)
     # run prediction and convert the frequency bin weights to Hz
 #     with graph.as_default():
 #         set_session(sess)
-return model.predict(frames, verbose=verbose)
+    return model.predict(frames, verbose=verbose)
 
     
 def predict(audio, sr, model_capacity='full',
