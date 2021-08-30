@@ -161,11 +161,10 @@ def to_viterbi_cents(salience):
     
 #     global sess
 #     global graph
-    sess = tf.Session()
-    graph = tf.get_default_graph()
-    with graph.as_default():
-        set_session(sess)
-        path = model.predict(observations.reshape(-1, 1), [len(observations)])
+    
+#     with graph.as_default():
+#         set_session(sess)
+    path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -200,7 +199,15 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     activation : np.ndarray [shape=(T, 360)]
         The raw activation matrix
     """
-    model = build_and_load_model(model_capacity)
+    
+    sess = tf.Session()
+    graph = tf.get_default_graph()
+
+    # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
+    # Otherwise, their weights will be unavailable in the threads after the session there has been set
+    with graph.as_default():
+        set_session(sess)
+        model = build_and_load_model(model_capacity)
 
     if len(audio.shape) == 2:
         audio = audio.mean(1)  # make mono
@@ -225,8 +232,7 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     # normalize each frame -- this is expected by the model
     frames -= np.mean(frames, axis=1)[:, np.newaxis]
     frames /= np.std(frames, axis=1)[:, np.newaxis]
-    sess = tf.Session()
-    graph = tf.get_default_graph()
+    
     # run prediction and convert the frequency bin weights to Hz
     with graph.as_default():
         set_session(sess)
