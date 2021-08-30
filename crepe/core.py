@@ -130,7 +130,7 @@ def to_local_average_cents(salience, center=None):
     raise Exception("label should be either 1d or 2d ndarray")
 
 
-def to_viterbi_cents(salience):
+def to_viterbi_cents(salience, sess, graph):
     """
     Find the Viterbi path using a transition prior that induces pitch
     continuity.
@@ -162,9 +162,9 @@ def to_viterbi_cents(salience):
 #     global sess
 #     global graph
     
-#     with graph.as_default():
-#         set_session(sess)
-    path = model.predict(observations.reshape(-1, 1), [len(observations)])
+    with graph.as_default():
+        set_session(sess)
+        path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -234,9 +234,9 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     frames /= np.std(frames, axis=1)[:, np.newaxis]
     
     # run prediction and convert the frequency bin weights to Hz
-#     with graph.as_default():
-#         set_session(sess)
-    return model.predict(frames, verbose=verbose)
+    with graph.as_default():
+        set_session(sess)
+        return model.predict(frames, verbose=verbose), sess, graph
 
     
 def predict(audio, sr, model_capacity='full',
@@ -279,13 +279,13 @@ def predict(audio, sr, model_capacity='full',
         activation: np.ndarray [shape=(T, 360)]
             The raw activation matrix
     """
-    activation = get_activation(audio, sr, model_capacity=model_capacity,
+    activation, sess, graph = get_activation(audio, sr, model_capacity=model_capacity,
                                 center=center, step_size=step_size,
                                 verbose=verbose)
     confidence = activation.max(axis=1)
 
     if viterbi:
-        cents = to_viterbi_cents(activation)
+        cents = to_viterbi_cents(activation, sess, graph)
     else:
         cents = to_local_average_cents(activation)
 
