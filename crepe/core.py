@@ -13,12 +13,12 @@ from tensorflow.python.keras.backend import set_session
 from tensorflow.python.keras.models import load_model
 import tensorflow.compat.v1 as tf
 
-# sess = tf.Session()
-# graph = tf.get_default_graph()
+sess = tf.Session()
+graph = tf.get_default_graph()
 
-# # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
-# # Otherwise, their weights will be unavailable in the threads after the session there has been set
-# set_session(sess)
+# IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
+# Otherwise, their weights will be unavailable in the threads after the session there has been set
+set_session(sess)
 
 # store as a global variable, since we only support a few models for now
 models = {
@@ -130,7 +130,7 @@ def to_local_average_cents(salience, center=None):
     raise Exception("label should be either 1d or 2d ndarray")
 
 
-def to_viterbi_cents(salience, sess, graph):
+def to_viterbi_cents(salience):
     """
     Find the Viterbi path using a transition prior that induces pitch
     continuity.
@@ -159,8 +159,8 @@ def to_viterbi_cents(salience, sess, graph):
     # find the Viterbi path
     observations = np.argmax(salience, axis=1)
     
-#     global sess
-#     global graph
+    local sess
+    local graph
     
     with graph.as_default():
         set_session(sess)
@@ -200,8 +200,8 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
         The raw activation matrix
     """
     
-    sess = tf.Session()
-    graph = tf.get_default_graph()
+    local sess
+    local graph
 
     # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
     # Otherwise, their weights will be unavailable in the threads after the session there has been set
@@ -236,7 +236,7 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     # run prediction and convert the frequency bin weights to Hz
     with graph.as_default():
         set_session(sess)
-        return model.predict(frames, verbose=verbose), sess, graph
+        return model.predict(frames, verbose=verbose)
 
     
 def predict(audio, sr, model_capacity='full',
@@ -279,13 +279,13 @@ def predict(audio, sr, model_capacity='full',
         activation: np.ndarray [shape=(T, 360)]
             The raw activation matrix
     """
-    activation, sess, graph = get_activation(audio, sr, model_capacity=model_capacity,
+    activation = get_activation(audio, sr, model_capacity=model_capacity,
                                 center=center, step_size=step_size,
                                 verbose=verbose)
     confidence = activation.max(axis=1)
 
     if viterbi:
-        cents = to_viterbi_cents(activation, sess, graph)
+        cents = to_viterbi_cents(activation)
     else:
         cents = to_local_average_cents(activation)
 
