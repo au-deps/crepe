@@ -159,8 +159,8 @@ def to_viterbi_cents(salience):
     # find the Viterbi path
     observations = np.argmax(salience, axis=1)
     
-    local sess
-    local graph
+    global sess
+    global graph
     
     with graph.as_default():
         set_session(sess)
@@ -200,8 +200,8 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
         The raw activation matrix
     """
     
-    local sess
-    local graph
+    global sess
+    global graph
 
     # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
     # Otherwise, their weights will be unavailable in the threads after the session there has been set
