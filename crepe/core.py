@@ -29,8 +29,11 @@ models = {
     'full': None
 }
 
-objects = { 'sess': tf.Session(),
-            'graph': tf.get_default_graph()
+# objects = { 'sess': tf.Session(),
+#             'graph': tf.get_default_graph()
+#           }
+objects = { 'sess': None,
+            'graph': None
           }
 
 # the model is trained on 16kHz audio
@@ -60,21 +63,25 @@ def build_and_load_model(model_capacity):
     from tensorflow.keras.layers import MaxPool2D, Dropout, Permute, Flatten, Dense
     from tensorflow.keras.models import Model
 
-    sess = objects['sess']
-    graph = objects['graph']
+    #sess = objects['sess']
+    #graph = objects['graph']
      
-    with graph.as_default():
-        set_session(sess)
-        if models[model_capacity] is None:
-            capacity_multiplier = {
-                'tiny': 4, 'small': 8, 'medium': 16, 'large': 24, 'full': 32
-            }[model_capacity]
+    #with graph.as_default():
+    #   set_session(sess)
+    if models[model_capacity] is None:
+        objects['sess'] = tf.Session()
+        objects['graph'] = tf.get_default_graph()
+        
+        capacity_multiplier = {
+            'tiny': 4, 'small': 8, 'medium': 16, 'large': 24, 'full': 32
+        }[model_capacity]
 
-            layers = [1, 2, 3, 4, 5, 6]
-            filters = [n * capacity_multiplier for n in [32, 4, 4, 4, 8, 16]]
-            widths = [512, 64, 64, 64, 64, 64]
-            strides = [(4, 1), (1, 1), (1, 1), (1, 1), (1, 1), (1, 1)]
-
+        layers = [1, 2, 3, 4, 5, 6]
+        filters = [n * capacity_multiplier for n in [32, 4, 4, 4, 8, 16]]
+        widths = [512, 64, 64, 64, 64, 64]
+        strides = [(4, 1), (1, 1), (1, 1), (1, 1), (1, 1), (1, 1)]
+        with objects['graph'].as_default():
+            set_session(objects['sess'])
             x = Input(shape=(1024,), name='input', dtype='float32')
             y = Reshape(target_shape=(1024, 1, 1), name='input-reshape')(x)
 
@@ -173,7 +180,9 @@ def to_viterbi_cents(salience):
     
 #     with graph.as_default():
 #         set_session(sess)
-    path = model.predict(observations.reshape(-1, 1), [len(observations)])
+    with objects['graph'].as_default():
+        with objects['sess'].as_default():
+            path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -244,7 +253,9 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     # run prediction and convert the frequency bin weights to Hz
 #     with graph.as_default():
 #         set_session(sess)
-    return model.predict(frames, verbose=verbose)
+    with objects['graph'].as_default():
+        with objects['sess'].as_default():
+            return model.predict(frames, verbose=verbose)
 
     
 def predict(audio, sr, model_capacity='full',
