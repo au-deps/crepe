@@ -222,7 +222,7 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     audio = audio.astype(np.float32)
     if sr != model_srate:
         # resample audio if necessary
-    from resampy import resample
+        from resampy import resample
         audio = resample(audio, sr, model_srate)
 
     # pad so that frames are centered around their timestamps (i.e. first frame
