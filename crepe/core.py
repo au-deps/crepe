@@ -13,12 +13,12 @@ from tensorflow.python.keras.backend import set_session
 from tensorflow.python.keras.models import load_model
 import tensorflow.compat.v1 as tf
 
-sess = tf.Session()
-graph = tf.get_default_graph()
+# sess = tf.Session()
+# graph = tf.get_default_graph()
 
-# IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
-# Otherwise, their weights will be unavailable in the threads after the session there has been set
-set_session(sess)
+# # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
+# # Otherwise, their weights will be unavailable in the threads after the session there has been set
+# set_session(sess)
 
 # store as a global variable, since we only support a few models for now
 models = {
@@ -28,6 +28,10 @@ models = {
     'large': None,
     'full': None
 }
+
+objects = { 'sess': tf.Session(),
+            'graph': tf.get_default_graph()
+          }
 
 # the model is trained on 16kHz audio
 model_srate = 16000
@@ -56,39 +60,44 @@ def build_and_load_model(model_capacity):
     from tensorflow.keras.layers import MaxPool2D, Dropout, Permute, Flatten, Dense
     from tensorflow.keras.models import Model
 
-    if models[model_capacity] is None:
-        capacity_multiplier = {
-            'tiny': 4, 'small': 8, 'medium': 16, 'large': 24, 'full': 32
-        }[model_capacity]
+    sess = objects['sess']
+    graph = objects['graph']
+     
+    with graph.as_default():
+        set_session(sess)
+        if models[model_capacity] is None:
+            capacity_multiplier = {
+                'tiny': 4, 'small': 8, 'medium': 16, 'large': 24, 'full': 32
+            }[model_capacity]
 
-        layers = [1, 2, 3, 4, 5, 6]
-        filters = [n * capacity_multiplier for n in [32, 4, 4, 4, 8, 16]]
-        widths = [512, 64, 64, 64, 64, 64]
-        strides = [(4, 1), (1, 1), (1, 1), (1, 1), (1, 1), (1, 1)]
+            layers = [1, 2, 3, 4, 5, 6]
+            filters = [n * capacity_multiplier for n in [32, 4, 4, 4, 8, 16]]
+            widths = [512, 64, 64, 64, 64, 64]
+            strides = [(4, 1), (1, 1), (1, 1), (1, 1), (1, 1), (1, 1)]
 
-        x = Input(shape=(1024,), name='input', dtype='float32')
-        y = Reshape(target_shape=(1024, 1, 1), name='input-reshape')(x)
+            x = Input(shape=(1024,), name='input', dtype='float32')
+            y = Reshape(target_shape=(1024, 1, 1), name='input-reshape')(x)
 
-        for l, f, w, s in zip(layers, filters, widths, strides):
-            y = Conv2D(f, (w, 1), strides=s, padding='same',
-                       activation='relu', name="conv%d" % l)(y)
-            y = BatchNormalization(name="conv%d-BN" % l)(y)
-            y = MaxPool2D(pool_size=(2, 1), strides=None, padding='valid',
+            for l, f, w, s in zip(layers, filters, widths, strides):
+                y = Conv2D(f, (w, 1), strides=s, padding='same',
+                        activation='relu', name="conv%d" % l)(y)
+                y = BatchNormalization(name="conv%d-BN" % l)(y)
+                y = MaxPool2D(pool_size=(2, 1), strides=None, padding='valid',
                           name="conv%d-maxpool" % l)(y)
-            y = Dropout(0.25, name="conv%d-dropout" % l)(y)
+                y = Dropout(0.25, name="conv%d-dropout" % l)(y)
 
-        y = Permute((2, 1, 3), name="transpose")(y)
-        y = Flatten(name="flatten")(y)
-        y = Dense(360, activation='sigmoid', name="classifier")(y)
+            y = Permute((2, 1, 3), name="transpose")(y)
+            y = Flatten(name="flatten")(y)
+            y = Dense(360, activation='sigmoid', name="classifier")(y)
 
-        model = Model(inputs=x, outputs=y)
+            model = Model(inputs=x, outputs=y)
 
-        package_dir = os.path.dirname(os.path.realpath(__file__))
-        filename = "model-{}.h5".format(model_capacity)
-        model.load_weights(os.path.join(package_dir, filename))
-        model.compile('adam', 'binary_crossentropy')
+            package_dir = os.path.dirname(os.path.realpath(__file__))
+            filename = "model-{}.h5".format(model_capacity)
+            model.load_weights(os.path.join(package_dir, filename))
+            model.compile('adam', 'binary_crossentropy')
 
-        models[model_capacity] = model
+            models[model_capacity] = model
 
     return models[model_capacity]
 
@@ -159,12 +168,12 @@ def to_viterbi_cents(salience):
     # find the Viterbi path
     observations = np.argmax(salience, axis=1)
     
-    global sess
-    global graph
+#     global sess
+#     global graph
     
-    with graph.as_default():
-        set_session(sess)
-        path = model.predict(observations.reshape(-1, 1), [len(observations)])
+#     with graph.as_default():
+#         set_session(sess)
+    path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in
                      range(len(observations))])
@@ -200,14 +209,14 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
         The raw activation matrix
     """
     
-    global sess
-    global graph
+#     global sess
+#     global graph
 
-    # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
-    # Otherwise, their weights will be unavailable in the threads after the session there has been set
-    with graph.as_default():
-        set_session(sess)
-        model = build_and_load_model(model_capacity)
+#     # IMPORTANT: models have to be loaded AFTER SETTING THE SESSION for keras! 
+#     # Otherwise, their weights will be unavailable in the threads after the session there has been set
+#     with graph.as_default():
+#         set_session(sess)
+model = build_and_load_model(model_capacity)
 
     if len(audio.shape) == 2:
         audio = audio.mean(1)  # make mono
@@ -234,9 +243,9 @@ def get_activation(audio, sr, model_capacity='full', center=True, step_size=10,
     frames /= np.std(frames, axis=1)[:, np.newaxis]
     
     # run prediction and convert the frequency bin weights to Hz
-    with graph.as_default():
-        set_session(sess)
-        return model.predict(frames, verbose=verbose)
+#     with graph.as_default():
+#         set_session(sess)
+return model.predict(frames, verbose=verbose)
 
     
 def predict(audio, sr, model_capacity='full',
