@@ -9,10 +9,6 @@ from scipy.io import wavfile
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
-from tensorflow.python.keras.backend import set_session
-from tensorflow.python.keras.models import load_model
-import tensorflow.compat.v1 as tf
-
 # sess = tf.Session()
 # graph = tf.get_default_graph()
 
@@ -59,6 +55,10 @@ def build_and_load_model(model_capacity):
     model : tensorflow.keras.models.Model
         The pre-trained keras model loaded in memory
     """
+    
+    from tensorflow.python.keras.backend import set_session
+    from tensorflow.python.keras.models import load_model
+    import tensorflow.compat.v1 as tf
     from tensorflow.keras.layers import Input, Reshape, Conv2D, BatchNormalization
     from tensorflow.keras.layers import MaxPool2D, Dropout, Permute, Flatten, Dense
     from tensorflow.keras.models import Model
